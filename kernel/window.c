@@ -4,38 +4,79 @@
 
 
 
-void move_cursor(WINDOW* wnd, int x, int y)
-{
+void move_cursor(WINDOW* wnd, int x, int y){
+
+}
+//cursor: 0x b0
+
+void remove_cursor(WINDOW* wnd){
+  short cursor = (0x0f << 8) | 0;
+  poke_w(0xb8000 + ((wnd->x + wnd->cursor_x)*2) + ((wnd->y + wnd->cursor_y)*160) , cursor);
 }
 
 
-void remove_cursor(WINDOW* wnd)
-{
+void show_cursor(WINDOW* wnd){
+  short cursor = (0x0f << 8) | 0xb0;
+  poke_w(0xb8000 + ((wnd->x + wnd->cursor_x)*2) + ((wnd->y + wnd->cursor_y)*160) , cursor);
 }
 
 
-void show_cursor(WINDOW* wnd)
-{
+void clear_window(WINDOW* wnd){
+
 }
 
 
-void clear_window(WINDOW* wnd)
-{
+void output_char(WINDOW* wnd, unsigned char c){
+  short tempchar = (0x0f << 8) | c;
+  if(c != '\n'){
+    poke_w(0xb8000 + ((wnd->x + wnd->cursor_x)*2) + ((wnd->y + wnd->cursor_y)*160) , tempchar);
+  }
+
+  if(wnd->cursor_x+1 >= wnd->width || c == '\n'){
+    if(wnd->cursor_y +1 >= wnd->height){
+      scroll(&wnd);
+    }
+    else {wnd->cursor_y++;}
+    wnd->cursor_x =0;
+  }
+  else{
+    wnd->cursor_x++;
+  }
 }
 
-
-void output_char(WINDOW* wnd, unsigned char c)
-{
+void output_string(WINDOW* wnd, const char *str){
+  short tempchar;
+  int len, i = 0;
+  len = k_strlen(str);
+  while(i < len){
+    tempchar = (0x0f << 8) | str[i];
+    if(str[i] != '\n'){
+      poke_w(0xb8000 + ((wnd->x + wnd->cursor_x)*2) + ((wnd->y + wnd->cursor_y)*160) , tempchar);
+    }
+    if(wnd->cursor_x+1 >= wnd->width || str[i] == '\n'){
+      if(wnd->cursor_y +1 >= wnd->height){
+        scroll(&wnd);
+      }
+      else{wnd->cursor_y++;}
+      wnd->cursor_x =0;
+    }
+    else{
+      wnd->cursor_x++;
+    }
+    i++;
+  }
 }
 
-
-
-void output_string(WINDOW* wnd, const char *str)
-{
+void scroll(WINDOW* wnd){
+  int x,y;
+  short tempchar;
+  for(y =1; y< wnd->height; y++){
+    for(x = 0; x< wnd-> width; x++){
+      tempchar = peek_w(0xb8000 + ((wnd->x + x)*2) + ((wnd->y + y)*160));
+      poke_w(0xb8000 + ((wnd->x + x)*2) + ((wnd->y + y-1)*160), tempchar);
+    }
+  }
 }
-
-
-
 /*
  * There is not need to make any changes to the code below,
  * however, you are encouraged to at least look at it!
@@ -52,28 +93,28 @@ char *printnum(char *b, unsigned int u, int base,
     char	*digs;
     static char up_digs[] = "0123456789ABCDEF";
     static char low_digs[] = "0123456789abcdef";
-    
+
     digs = upcase ? up_digs : low_digs;
     do {
 	*p-- = digs[ u % base ];
 	u /= base;
     } while( u != 0 );
-    
+
     if (negflag)
 	*b++ = '-';
-    
+
     size = &buf [MAXBUF - 1] - p;
-    
+
     if (size < length && !ladjust) {
 	while (length > size) {
 	    *b++ = padc;
 	    length--;
 	}
     }
-    
+
     while (++p != &buf [MAXBUF])
 	*b++ = *p;
-    
+
     if (size < length) {
 	/* must be ladjust */
 	while (length > size) {
@@ -129,7 +170,7 @@ void vsprintf(char *buf, const char *fmt, va_list argp)
     unsigned int        u;
     int			negflag;
     char		c;
-    
+
     while (*fmt != '\0') {
 	if (*fmt != '%') {
 	    *buf++ = *fmt++;
@@ -138,22 +179,22 @@ void vsprintf(char *buf, const char *fmt, va_list argp)
 	fmt++;
 	if (*fmt == 'l')
 	    fmt++;	     /* need to use it if sizeof(int) < sizeof(long) */
-	
+
 	length = 0;
 	prec = -1;
 	ladjust = FALSE;
 	padc = ' ';
-	
+
 	if (*fmt == '-') {
 	    ladjust = TRUE;
 	    fmt++;
 	}
-	
+
 	if (*fmt == '0') {
 	    padc = '0';
 	    fmt++;
 	}
-	
+
 	if (isdigit (*fmt)) {
 	    while (isdigit (*fmt))
 		length = 10 * length + ctod (*fmt++);
@@ -166,7 +207,7 @@ void vsprintf(char *buf, const char *fmt, va_list argp)
 		length = -length;
 	    }
 	}
-	
+
 	if (*fmt == '.') {
 	    fmt++;
 	    if (isdigit (*fmt)) {
@@ -178,21 +219,21 @@ void vsprintf(char *buf, const char *fmt, va_list argp)
 		fmt++;
 	    }
 	}
-	
+
 	negflag = FALSE;
-	
+
 	switch(*fmt) {
 	case 'b':
 	case 'B':
 	    u = va_arg (argp, unsigned int);
 	    buf = printnum (buf, u, 2, FALSE, length, ladjust, padc, 0);
 	    break;
-	    
+
 	case 'c':
 	    c = va_arg (argp, int);
 	    *buf++ = c;
 	    break;
-	    
+
 	case 'd':
 	case 'D':
 	    n = va_arg (argp, int);
@@ -204,13 +245,13 @@ void vsprintf(char *buf, const char *fmt, va_list argp)
 	    }
 	    buf = printnum (buf, u, 10, negflag, length, ladjust, padc, 0);
 	    break;
-	    
+
 	case 'o':
 	case 'O':
 	    u = va_arg (argp, unsigned int);
 	    buf = printnum (buf, u, 8, FALSE, length, ladjust, padc, 0);
 	    break;
-	    
+
 	case 's':
 	    p = va_arg (argp, char *);
 	    if (p == (char *)0)
@@ -239,27 +280,27 @@ void vsprintf(char *buf, const char *fmt, va_list argp)
 		}
 	    }
 	    break;
-	    
+
 	case 'u':
 	case 'U':
 	    u = va_arg (argp, unsigned int);
 	    buf = printnum (buf, u, 10, FALSE, length, ladjust, padc, 0);
 	    break;
-	    
+
 	case 'x':
 	    u = va_arg (argp, unsigned int);
 	    buf = printnum (buf, u, 16, FALSE, length, ladjust, padc, 0);
 	    break;
-	    
+
 	case 'X':
 	    u = va_arg (argp, unsigned int);
 	    buf = printnum (buf, u, 16, FALSE, length, ladjust, padc, 1);
 	    break;
-	    
+
 	case '\0':
 	    fmt--;
 	    break;
-	    
+
 	default:
 	    *buf++ = *fmt;
 	}
