@@ -1,42 +1,44 @@
-
 #include <kernel.h>
 
-
-
-
 void move_cursor(WINDOW* wnd, int x, int y){
-
+  if((0 <=  x )&& (x < wnd->width)){
+    wnd->cursor_x = x;
+  }
+  if((0 <=  y) && (y < wnd->height)){
+    wnd->cursor_y = y;
+  }
 }
-//cursor: 0x b0
 
 void remove_cursor(WINDOW* wnd){
-  short cursor = (0x0f << 8) | 0;
-  poke_w(0xb8000 + ((wnd->x + wnd->cursor_x)*2) + ((wnd->y + wnd->cursor_y)*160) , cursor);
+  poke_w(0xb8000 + ((wnd->x + wnd->cursor_x)*2) + ((wnd->y + wnd->cursor_y)*160) , 0);
 }
-
 
 void show_cursor(WINDOW* wnd){
-  short cursor = (0x0f << 8) | 0xb0;
+  short cursor = (0x82 << 8) | wnd->cursor_char;
   poke_w(0xb8000 + ((wnd->x + wnd->cursor_x)*2) + ((wnd->y + wnd->cursor_y)*160) , cursor);
 }
 
-
 void clear_window(WINDOW* wnd){
-
+  int w, h;
+  for(h=0; h < wnd->height; h++){
+    for(w=0; w < wnd->width; w++){
+      poke_w(0xb8000 + ((wnd->x + w)*2) + ((wnd->y + h)*160) ,0);
+    }
+  }
+  wnd->cursor_x = 0;
+  wnd->cursor_y = 0;
 }
-
 
 void output_char(WINDOW* wnd, unsigned char c){
   short tempchar = (0x0f << 8) | c;
   if(c != '\n'){
     poke_w(0xb8000 + ((wnd->x + wnd->cursor_x)*2) + ((wnd->y + wnd->cursor_y)*160) , tempchar);
   }
-
   if(wnd->cursor_x+1 >= wnd->width || c == '\n'){
     if(wnd->cursor_y +1 >= wnd->height){
-      scroll(&wnd);
+      scroll(wnd);
     }
-    else {wnd->cursor_y++;}
+    else{wnd->cursor_y++;}
     wnd->cursor_x =0;
   }
   else{
@@ -48,6 +50,7 @@ void output_string(WINDOW* wnd, const char *str){
   short tempchar;
   int len, i = 0;
   len = k_strlen(str);
+
   while(i < len){
     tempchar = (0x0f << 8) | str[i];
     if(str[i] != '\n'){
@@ -55,7 +58,7 @@ void output_string(WINDOW* wnd, const char *str){
     }
     if(wnd->cursor_x+1 >= wnd->width || str[i] == '\n'){
       if(wnd->cursor_y +1 >= wnd->height){
-        scroll(&wnd);
+        scroll(wnd);
       }
       else{wnd->cursor_y++;}
       wnd->cursor_x =0;
@@ -68,13 +71,10 @@ void output_string(WINDOW* wnd, const char *str){
 }
 
 void scroll(WINDOW* wnd){
-  int x,y;
-  short tempchar;
-  for(y =1; y< wnd->height; y++){
-    for(x = 0; x< wnd-> width; x++){
-      tempchar = peek_w(0xb8000 + ((wnd->x + x)*2) + ((wnd->y + y)*160));
-      poke_w(0xb8000 + ((wnd->x + x)*2) + ((wnd->y + y-1)*160), tempchar);
-    }
+  int i, base;
+  for(i = 0; i< wnd->height; i++){
+    base =  0xb8000 + (wnd->x *2) + ((wnd->y + i)*160);
+    k_memcpy(base, base + 160, wnd->width*2);
   }
 }
 /*
