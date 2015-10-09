@@ -22,8 +22,20 @@ PCB *ready_queue [MAX_READY_QUEUES];
  * The appropiate ready queue is determined by p->priority.
  */
 
-void add_ready_queue (PROCESS proc)
-{
+void add_ready_queue (PROCESS proc){
+  if(ready_queue[proc->priority] == NULL){
+    ready_queue[proc->priority] = proc;
+    proc->next = proc;
+    proc->prev = proc;
+  }
+
+  else{
+    proc->prev = ready_queue[proc->priority]->prev;
+    proc->next = ready_queue[proc->priority];
+    ready_queue[proc->priority]->prev->next = proc;
+    ready_queue[proc->priority]->prev = proc;
+  }
+
 }
 
 
@@ -35,8 +47,15 @@ void add_ready_queue (PROCESS proc)
  * queue.
  */
 
-void remove_ready_queue (PROCESS proc)
-{
+void remove_ready_queue (PROCESS proc){
+
+  if(proc->next->name == proc->name){
+    ready_queue[proc->priority] == NULL;
+  }
+  else{
+    proc->prev->next = proc->next;
+    proc->next->prev = proc->prev;
+  }
 }
 
 
@@ -49,8 +68,17 @@ void remove_ready_queue (PROCESS proc)
  * level round robin is used.
  */
 
-PROCESS dispatcher()
-{
+PROCESS dispatcher(){
+  int pri = 7;
+  while(ready_queue[pri] == NULL){
+    pri--;
+  }
+  if(pri == active_proc->priority){
+    return active_proc->next;
+  }
+  else{
+    return ready_queue[pri];
+  }
 }
 
 
@@ -63,8 +91,8 @@ PROCESS dispatcher()
  * The stack of the calling process is setup such that it
  * looks like an interrupt.
  */
-void resign()
-{
+void resign(){
+
 }
 
 
@@ -75,6 +103,10 @@ void resign()
  * Initializes the necessary data structures.
  */
 
-void init_dispatcher()
-{
+void init_dispatcher(){
+  int i = 0;
+  while(i < MAX_READY_QUEUES){
+    ready_queue[i] = NULL;
+    i++;
+  }
 }
