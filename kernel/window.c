@@ -1,5 +1,7 @@
 #include <kernel.h>
 
+static void scroll(WINDOW* wnd);
+
 void move_cursor(WINDOW* wnd, int x, int y){
   if((0 <=  x )&& (x < wnd->width)){
     wnd->cursor_x = x;
@@ -70,7 +72,7 @@ void output_string(WINDOW* wnd, const char *str){
   }
 }
 
-void scroll(WINDOW* wnd){
+static void scroll(WINDOW* wnd){
   int i, base;
   for(i = 0; i< wnd->height; i++){
     base =  0xb8000 + (wnd->x *2) + ((wnd->y + i)*160);

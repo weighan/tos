@@ -18,7 +18,7 @@ void test_create_process_3_process_a (PROCESS self, PARAM param)
  * Explicitly create a new process. We don't do a context switch just yet.
  * The new process should be in STATE_READY.
  */
-void test_create_process_3() 
+void test_create_process_3()
 {
     test_reset();
 

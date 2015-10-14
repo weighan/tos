@@ -1,19 +1,13 @@
 
 #include <kernel.h>
-
 #include "disptable.c"
 
-
 PROCESS active_proc;
-
 
 /*
  * Ready queues for all eight priorities.
  */
 PCB *ready_queue [MAX_READY_QUEUES];
-
-
-
 
 /*
  * add_ready_queue
@@ -35,10 +29,8 @@ void add_ready_queue (PROCESS proc){
     ready_queue[proc->priority]->prev->next = proc;
     ready_queue[proc->priority]->prev = proc;
   }
-
+  proc->state = STATE_READY;
 }
-
-
 
 /*
  * remove_ready_queue
@@ -49,16 +41,19 @@ void add_ready_queue (PROCESS proc){
 
 void remove_ready_queue (PROCESS proc){
 
-  if(proc->next->name == proc->name){
-    ready_queue[proc->priority] == NULL;
+  if(proc->next == proc){
+    ready_queue[proc->priority] = NULL;
   }
   else{
+    if(ready_queue[proc->priority] == proc){
+      ready_queue[proc->priority] = proc->next;
+    }
     proc->prev->next = proc->next;
     proc->next->prev = proc->prev;
   }
+  proc->next = NULL;
+  proc->prev = NULL;
 }
-
-
 
 /*
  * dispatcher
@@ -81,8 +76,6 @@ PROCESS dispatcher(){
   }
 }
 
-
-
 /*
  * resign
  *----------------------------------------------------------------------------
@@ -94,8 +87,6 @@ PROCESS dispatcher(){
 void resign(){
 
 }
-
-
 
 /*
  * init_dispatcher
@@ -109,4 +100,5 @@ void init_dispatcher(){
     ready_queue[i] = NULL;
     i++;
   }
+  add_ready_queue(active_proc);
 }

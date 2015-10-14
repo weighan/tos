@@ -3,12 +3,12 @@
 #include <lib.h>
 
 
-int test_result; 
+int test_result;
 unsigned check_sum;
 char test_results[MAX_NUM_TESTS];
 WINDOW report_window = {0, 23, 80, 2, 0, 0, ' '};
 
-    
+
 extern WORD lib_default_color;
 
 
@@ -34,13 +34,13 @@ void test_reset()
 //    init_null_process();
 //    init_timer();
 //    init_com();
-    
+
 }
 
 /*
  * Check if a process is on ready queue.
- */ 
-BOOL is_on_ready_queue(PROCESS proc) 
+ */
+BOOL is_on_ready_queue(PROCESS proc)
 {
    BOOL on = FALSE;
    PROCESS first_process, current_process;
@@ -56,27 +56,27 @@ BOOL is_on_ready_queue(PROCESS proc)
                break;
             }
 
-         } while(current_process != first_process); 
-      } 
+         } while(current_process != first_process);
+      }
    }
 
    return on;
 }
-   
+
 /*
  * Passes execution to boot process.
  * Precondition:
  *    1. pcb[0] is used for boot process.
- *    2. boot process must be on ready queue 
+ *    2. boot process must be on ready queue
  */
 void return_to_boot()
 {
    asm("cli");
-   
+
    int i;
    for ( i = 1; i < MAX_PROCS; i ++)
    {
-      if (pcb[i].used) 
+      if (pcb[i].used)
          if (is_on_ready_queue(&pcb[i]))
             remove_ready_queue(&pcb[i]);
    }
@@ -91,7 +91,7 @@ void write_test_report(char attr)
 {
     char ch = 196; // Horizontal line
     int i;
-    
+
     asm ("cli");
     lib_default_color = attr;
     lib_clear_window(&report_window);
@@ -125,11 +125,11 @@ void test_failed_impl(int code, char* file, int line)
     write_test_report(COLOR_RED);
     lib_wprintf(&report_window, "%s failed at line %d. Error code: %d",
 		file, line, code);
-    
+
     if (test_results[0] == '\0')
 	// the TOS Test Center isn't running. Stop right here
 	while (42) ;
-    
+
     send_to_test_center("RESULT=");
     char buf[20];
     char *b = buf;
@@ -146,10 +146,10 @@ void test_failed_impl(int code, char* file, int line)
 /*
  *  This function is used to check screen output.
  *  It checks if the characters on the screen matches a given array of strings.
- *  contents  
+ *  contents
  *      -- an array of strings that corresponds to consecutive lines
- *         of the screen output. Each string should correspond to 
- *         one line. No '\n' is needed at the end of a string. 
+ *         of the screen output. Each string should correspond to
+ *         one line. No '\n' is needed at the end of a string.
  */
 void check_screen_output(char** contents)
 {
@@ -179,7 +179,7 @@ void check_screen_output(char** contents)
        }
        i++;
    }
-} 
+}
 
 
 /*
@@ -188,7 +188,7 @@ void check_screen_output(char** contents)
 int string_compare(char* str1, char* str2)
 {
    int equal = 1;
-   
+
    int i;
    for(i = 0; str1[i] != '\0' && str2[i] != '\0'; i++) {
        if (str1[i] != str2[i]) {
@@ -197,34 +197,34 @@ int string_compare(char* str1, char* str2)
        }
    }
 
-   if (str1[i] != '\0' || str2[i] != '\0') 
+   if (str1[i] != '\0' || str2[i] != '\0')
        equal = 0;
-   
+
    return equal;
 }
 
 /*
- *  Given the name of a process, find its PCB entry 
+ *  Given the name of a process, find its PCB entry
  */
-PROCESS find_process_by_name (char* name) 
+PROCESS find_process_by_name (char* name)
 {
-   PROCESS this_process = NULL; 
+   PROCESS this_process = NULL;
 
    //find the process in the PCB array
    int i;
-   for (i = 0; i < MAX_PROCS; i++) 
+   for (i = 0; i < MAX_PROCS; i++)
    {
       if (string_compare(pcb[i].name, name) )
       {
          this_process = &pcb[i];
-         break; 
+         break;
       }
    }
-   return this_process; 
+   return this_process;
 }
 
 /*
- * Check number of processes in the pcb array. 
+ * Check number of processes in the pcb array.
  * This function can be used to check if there are extra pcb entries.
  */
 void check_num_of_pcb_entries(int num)
@@ -250,11 +250,11 @@ void check_num_of_pcb_entries(int num)
 void check_create_process(char* name,
 			  int priority,
 			  void (*entry_point) (PROCESS, PARAM),
-			  PARAM param) 
+			  PARAM param)
 {
    //find the PCB entry for the process
    PROCESS this_process = find_process_by_name(name);
-  
+
    //if the process is not in the pcb array, it is incorrect.
    if (this_process == NULL)
    {
@@ -262,15 +262,15 @@ void check_create_process(char* name,
       return;
    }
 
-   //check if the PCB entry is initialized correctly  
+   //check if the PCB entry is initialized correctly
    if (this_process-> magic != MAGIC_PCB ||
        this_process -> used != TRUE ||
        this_process -> state != STATE_READY ||
-       this_process-> priority != priority ) 
+       this_process-> priority != priority )
    {
       test_result = 11;
       return;
-   } 
+   }
 
    //check new process's stack
    if(string_compare(name, boot_name))
@@ -281,7 +281,7 @@ void check_create_process(char* name,
 
    unsigned stack_pointer = this_process->esp;
 
-   if (peek_l(stack_pointer + 28 ) != (LONG) entry_point ) 
+   if (peek_l(stack_pointer + 28 ) != (LONG) entry_point )
    {
       test_result = 12;
       return;
@@ -293,11 +293,11 @@ void check_create_process(char* name,
 /*
  * This function checks the number of processes on the ready queues.
  * It can be used to ensure that there is no extra process on the ready queues.
- * This function works properly only when the double link lists 
- * are created correcty, i.e. a traversal that start with the first process 
+ * This function works properly only when the double link lists
+ * are created correcty, i.e. a traversal that start with the first process
  * will eventurally  return to the first process.
  */
-void check_num_proc_on_ready_queue(int num) 
+void check_num_proc_on_ready_queue(int num)
 {
    int counter = 0;
 
@@ -306,14 +306,14 @@ void check_num_proc_on_ready_queue(int num)
    {
       PROCESS first_process, current_process;
       first_process = current_process = ready_queue[i];
-      if (first_process != NULL) 
+      if (first_process != NULL)
       {
          do
          {
-            counter ++;     
+            counter ++;
             current_process = current_process -> next;
-         } while(current_process != first_process); 
-      } 
+         } while(current_process != first_process);
+      }
    }
 
    if (counter != num)
@@ -321,13 +321,13 @@ void check_num_proc_on_ready_queue(int num)
 }
 
 /*
- * This function checks if the state of a process is correct and if 
+ * This function checks if the state of a process is correct and if
  * the process is on ready queue or not.
- * This function works properly only when the double link lists 
- * are created correcty, i.e. a traversal that start with the first process 
+ * This function works properly only when the double link lists
+ * are created correcty, i.e. a traversal that start with the first process
  * will eventurally  return to the first process.
  */
-void check_process(char* name, int state, BOOL should_be_on_ready_queue) 
+void check_process(char* name, int state, BOOL should_be_on_ready_queue)
 {
    //find the PCB entry for the process
    PROCESS this_process = find_process_by_name(name);
@@ -350,7 +350,7 @@ void check_process(char* name, int state, BOOL should_be_on_ready_queue)
 
    //If should_be_on_ready_queue, the process should be on ready queue and
    //state should be STATE_READY.
-   //Otherwise, the process should not be on the ready queue. (state can 
+   //Otherwise, the process should not be on the ready queue. (state can
    //be STATE_READY or other states.)
    if ( should_be_on_ready_queue == 0 && on == TRUE) {
       test_result = 14;
@@ -358,19 +358,19 @@ void check_process(char* name, int state, BOOL should_be_on_ready_queue)
       test_result = 15;
    } else if ( on == TRUE && state != STATE_READY) {
       test_result = 16;
-   }   
+   }
 }
 
-   
+
 /*
- * Checks if a port is correct. 
+ * Checks if a port is correct.
  * Parameters:
  *    the_port   -- the port to be check
  *    owner_name -- the name of the the owner of the port
  *    should_be_open    -- whether the port is open
  */
 void check_port(PORT the_port, char* owner_name, BOOL should_be_open)
-{ 
+{
    //find the owner process
    PROCESS owner = find_process_by_name(owner_name);
 
@@ -388,7 +388,7 @@ void check_port(PORT the_port, char* owner_name, BOOL should_be_open)
       test_result = 34;
       return;
    }
-  
+
    if (the_port -> open == FALSE && should_be_open == TRUE)
    {
       test_result = 33;
@@ -407,7 +407,7 @@ void check_port(PORT the_port, char* owner_name, BOOL should_be_open)
       }
       temp = temp -> next;
    }
-  
+
    if (!found )
       test_result = 32;
 }

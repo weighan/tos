@@ -8,9 +8,25 @@ PORT create_process (void (*ptr_to_new_proc) (PROCESS, PARAM),
 int prio,
 PARAM param,
 char *name){
+  int i;
+  MEM_ADDR stack;
+  for(i = 0; i< MAX_PROCS; i++){
+    if(pcb[i].used == FALSE){
 
-
-  return NULL;
+      pcb[i].magic = MAGIC_PCB;
+      pcb[i].used = TRUE;
+      pcb[i].priority = prio;
+      pcb[i].state = STATE_READY;
+      stack = 0xA0000 - (30720 * i);
+      poke_l(stack + 28, ptr_to_new_proc);
+      pcb[i].esp = stack;
+      pcb[i].param_data = param;
+      pcb[i].first_port = NULL;
+      pcb[i].name = name;
+      add_ready_queue(&pcb[i]);
+      return (PORT) NULL;
+    }
+  }
 }
 
 PROCESS fork(){
@@ -88,7 +104,7 @@ void print_all_processes(WINDOW* wnd){
       }
       output_string(wnd, str);
 
-      if(pcb[i].esp == active_proc->esp){
+      if(&pcb[i] == active_proc){
         output_string(wnd, "X      ");
       }
       else{
@@ -104,10 +120,16 @@ void print_all_processes(WINDOW* wnd){
 }
 
 void init_process(){
+  int i;
   pcb[0].magic = MAGIC_PCB;
   pcb[0].used = TRUE;
   pcb[0].state = STATE_READY;
   pcb[0].priority = 1;
   pcb[0].first_port = NULL;
   pcb[0].name = "Boot process";
+  active_proc = &pcb[0];
+
+  for(i = 1; i < MAX_PROCS; i++){
+    pcb[i].used = FALSE;
+  }
 }
