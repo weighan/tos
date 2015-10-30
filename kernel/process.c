@@ -6,7 +6,7 @@ PORT create_process (void (*ptr_to_new_proc) (PROCESS, PARAM),
 int prio,
 PARAM param,
 char *name){
-  int i,j;
+  int i;
   MEM_ADDR stack, temp;
   for(i = 0; i< MAX_PROCS; i++){
     if(pcb[i].used == FALSE){
@@ -15,32 +15,14 @@ char *name){
         pcb[i].used = TRUE;
         pcb[i].priority = prio;
         pcb[i].state = STATE_READY;
-        stack = 0xA0000 - (0x7800 * i);
 
-        //kprintf("stack is %u\n", stack);
+        stack = 0xA0000 - (0x7800 * i);
         poke_l(stack ,(long) param);
         poke_l(stack -4, (long)&pcb[i]);
         poke_l(stack -8,(long) ptr_to_new_proc);
         poke_l(stack -12,(long) ptr_to_new_proc);
         pcb[i].esp = stack -40;
-        /*
-        kprintf("esp is %u\n", pcb[i].esp);
 
-        kprintf("stack 2 is %u\n", stack);
-        asm("movl %%esp, %0" :"=r" (temp));
-        asm("movl %0, %%esp" :: "r" (stack));
-        asm("pushl %0" :: "r" (ptr_to_new_proc):);
-        asm("pushl %eax\n"
-            "pushl %ecx\n"
-            "pushl %edx\n"
-            "pushl %ebx\n"
-            "pushl %ebp\n"
-            "pushl %esi\n"
-            "pushl %edi\n");
-        asm("movl %%esp , %0" : "=r" (active_proc->esp));
-        asm("movl %0, %%esp" :: "r" (temp));
-        kprintf("esp 2 is %u\n", active_proc->esp);
-        */
         pcb[i].param_data = param;
         pcb[i].first_port = NULL;
         pcb[i].name = name;
