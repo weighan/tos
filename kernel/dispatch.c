@@ -51,8 +51,8 @@ void remove_ready_queue (PROCESS proc){
     proc->prev->next = proc->next;
     proc->next->prev = proc->prev;
   }
-  proc->next = NULL;
-  proc->prev = NULL;
+  //proc->next = NULL;
+  //proc->prev = NULL;
 }
 
 /*
@@ -64,15 +64,16 @@ void remove_ready_queue (PROCESS proc){
  */
 
 PROCESS dispatcher(){
-  int pri = 7;
-  while(ready_queue[pri] == NULL){
-    pri--;
+  int priority = MAX_READY_QUEUES -1;
+  while(ready_queue[priority] == NULL){
+    priority--;
+    if(priority <0){return NULL;}
   }
-  if(pri == active_proc->priority){
+  if(priority == active_proc->priority){
     return active_proc->next;
   }
   else{
-    return ready_queue[pri];
+    return ready_queue[priority];
   }
 }
 
@@ -85,7 +86,28 @@ PROCESS dispatcher(){
  * looks like an interrupt.
  */
 void resign(){
+  //push old process' registers to stack
+  asm("pushl %eax\n\t"
+      "pushl %ecx\n\t"
+      "pushl %edx\n\t"
+      "pushl %ebx\n\t"
+      "pushl %ebp\n\t"
+      "pushl %esi\n\t"
+      "pushl %edi");
+  asm("movl %%esp , %0" : "=r" (active_proc->esp):);
 
+  active_proc = dispatcher();
+
+  //load new process' new registers from stack
+  asm("movl %0, %%esp" :: "r" (active_proc->esp ):);
+  asm("popl %edi\n\t"
+      "popl %esi\n\t"
+      "popl %ebp\n\t"
+      "popl %ebx\n\t"
+      "popl %edx\n\t"
+      "popl %ecx\n\t"
+      "popl %eax");
+  asm("ret");
 }
 
 /*
