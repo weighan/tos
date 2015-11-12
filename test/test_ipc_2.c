@@ -23,13 +23,14 @@ void test_ipc_2_sender_process(PROCESS self, PARAM param)
 
     kprintf("%s: sending a message using send()...\n",
 	    self->name);
+
     send(receiver_port, &data1);
 
     if (check_sum != 1)
        test_failed(37);
 
     kprintf("%s: received data = %d\n", self->name, data1);
- 
+
     if (data1 != 11)
        test_failed(42);
 
@@ -50,6 +51,7 @@ void test_ipc_2_sender_process(PROCESS self, PARAM param)
 
     kprintf("%s: sending a message using message()...\n",
 	    self->name);
+
     message(receiver_port, &data2);
 
     if (check_sum != 7)
@@ -69,7 +71,7 @@ void test_ipc_2_receiver_process (PROCESS self, PARAM param)
 {
     PROCESS sender;
     int* data;
-   
+
     /*
      * receiving the first message
      */
@@ -77,7 +79,7 @@ void test_ipc_2_receiver_process (PROCESS self, PARAM param)
 
     // Sender should now be SEND_BLOCKED and off read queue
     check_process("Sender", STATE_SEND_BLOCKED, FALSE);
-    if (test_result == 13) {    
+    if (test_result == 13) {
 	print_all_processes(kernel_window);
 	test_failed(35);
     }
@@ -102,13 +104,14 @@ void test_ipc_2_receiver_process (PROCESS self, PARAM param)
     }
 
     kprintf("%s: received a message from %s, parameter = %d\n",
-	    self->name, sender->name, *data);
+	   self->name, sender->name, *data);
 
     if (*data != 42)
-	test_failed(41); 
+	test_failed(41);
     *data = 11;
 
     kprintf("%s: replying to %s.\n", self->name, sender->name);
+
     reply(sender);
 
     if (check_sum != 3)
@@ -121,7 +124,7 @@ void test_ipc_2_receiver_process (PROCESS self, PARAM param)
 
     // Sender should now be MESSAGE_BLOCKED and off read queue
     check_process("Sender", STATE_MESSAGE_BLOCKED, FALSE);
-    if (test_result == 13) {    
+    if (test_result == 13) {
 	print_all_processes(kernel_window);
 	test_failed(43);
     }
@@ -135,15 +138,15 @@ void test_ipc_2_receiver_process (PROCESS self, PARAM param)
 
     if (*data == 11)
 	test_failed(44); //the first message is received again
-    
+
     // Sender should now be STATE_READY and on read queue
     check_process("Sender", STATE_READY, TRUE);
     if (test_result == 13) {
 	print_all_processes(kernel_window);
 	test_failed(45);
     }
-    if (test_result != 0) { 
-	print_all_processes(kernel_window); 
+    if (test_result != 0) {
+	print_all_processes(kernel_window);
 	test_failed(46);
     }
 
@@ -166,7 +169,7 @@ void test_ipc_2_receiver_process (PROCESS self, PARAM param)
  *    the sender will be SEND_BLOCKED.
  * 2. Execution resumes with the receiver. The receiver executes a receive(),
  *    which will return immediately, and change the sender to state
- *    REPLY_BLOCKED. 
+ *    REPLY_BLOCKED.
  * 3. The receivers does a reply(), and put the sender back on the ready queue.
  *    The resign() in the reply() will therefore transfer the control back to
  *    the sender.
@@ -175,10 +178,10 @@ void test_ipc_2_receiver_process (PROCESS self, PARAM param)
  * 5. Execution resumes with the receiver. The receiver executes a receive(),
  *    which will return immediately, and change the sender to STATE_READY.
  * 6. The receiver does a resign() and pass the execution back to the sender.
- * This test send() and message() in the case that the receiver is not 
+ * This test send() and message() in the case that the receiver is not
  * ready to receive. It also test receive() in the case that there are messages
- * pending. 
- */ 
+ * pending.
+ */
 void test_ipc_2 ()
 {
     PORT new_port;
