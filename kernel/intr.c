@@ -7,9 +7,7 @@ IDT idt [MAX_INTERRUPTS];
 PROCESS interrupt_table [MAX_INTERRUPTS];
 PROCESS p;
 
-
-void load_idt (IDT* base)
-{
+void load_idt (IDT* base){
     unsigned short           limit;
     volatile unsigned char   mem48 [6];
     volatile unsigned       *base_ptr;
@@ -24,38 +22,38 @@ void load_idt (IDT* base)
 }
 
 
-void init_idt_entry (int intr_no, void (*isr) (void))
-{
+void init_idt_entry (int intr_no, void (*isr) (void)){
+
 }
-
-
-
 
 /*
  * Timer ISR
  */
-void isr_timer ();
-void dummy_isr_timer ()
-{
+void isr_timer (){
+
 }
+void dummy_isr_timer (){
 
-
+}
 
 /*
  * COM1 ISR
  */
-void isr_com1 ();
-void dummy_isr_com1 ()
-{
-}
+void isr_com1 (){
 
+}
+void dummy_isr_com1 (){
+
+}
 
 /*
  * Keyboard ISR
  */
-void isr_keyb();
-void dummy_isr_keyb()
-{
+void isr_keyb(){
+
+}
+
+void dummy_isr_keyb(){
     /*
      *	PUSHL	%EAX		; Save process' context
      *  PUSHL   %ECX
@@ -106,23 +104,20 @@ void dummy_isr_keyb()
     asm ("popl %edi;popl %esi;popl %ebp;popl %ebx");
     asm ("popl %edx;popl %ecx;popl %eax");
     asm ("iret");
+
 }
 
-void wait_for_interrupt (int intr_no)
-{
+void wait_for_interrupt (int intr_no){
+
 }
 
-
-void delay ()
-{
+void delay (){
     asm ("nop;nop;nop");
 }
 
-void re_program_interrupt_controller ()
-{
+void re_program_interrupt_controller (){
     /* Shift IRQ Vectors so they don't collide with the
        x86 generated IRQs */
-
     // Send initialization sequence to 8259A-1
     asm ("movb $0x11,%al;outb %al,$0x20;call delay");
     // Send initialization sequence to 8259A-2
@@ -145,6 +140,16 @@ void re_program_interrupt_controller ()
     asm ("movb $0x00,%al;outb %al,$0xA1;call delay");
 }
 
-void init_interrupts()
-{
+void init_interrupts(){
+  int i;
+  re_program_interrupt_controller();
+  for(i = 0; i < MAX_INTERRUPTS; i++){
+    idt[i].selector =    8;
+    idt[i].dword_count = 0;
+    idt[i].type =        0xE;
+    idt[i].dt =          0;
+    idt[i].dpl =         0;
+    idt[i].p =           1;
+  }
+  load_idt(&idt);
 }
