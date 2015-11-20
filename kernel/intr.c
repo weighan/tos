@@ -29,9 +29,7 @@ void init_idt_entry (int intr_no, void (*isr) (void)){
 /*
  * Timer ISR
  */
-void isr_timer (){
-
-}
+void isr_timer ();
 void dummy_isr_timer (){
 
 }
@@ -39,9 +37,7 @@ void dummy_isr_timer (){
 /*
  * COM1 ISR
  */
-void isr_com1 (){
-
-}
+void isr_com1 ();
 void dummy_isr_com1 (){
 
 }
@@ -49,9 +45,7 @@ void dummy_isr_com1 (){
 /*
  * Keyboard ISR
  */
-void isr_keyb(){
-
-}
+void isr_keyb();
 
 void dummy_isr_keyb(){
     /*
@@ -150,6 +144,7 @@ void init_interrupts(){
     idt[i].dt =          0;
     idt[i].dpl =         0;
     idt[i].p =           1;
+    load_idt(&idt[i]);
   }
-  load_idt(&idt);
+
 }
