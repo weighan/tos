@@ -1,11 +1,9 @@
-
 #include <kernel.h>
 
 BOOL interrupts_initialized = FALSE;
 
 IDT idt [MAX_INTERRUPTS];
 PROCESS interrupt_table [MAX_INTERRUPTS];
-PROCESS p;
 
 void load_idt (IDT* base){
     unsigned short           limit;
@@ -21,33 +19,74 @@ void load_idt (IDT* base){
     asm ("lidt %0" : "=m" (mem48));
 }
 
-
 void init_idt_entry (int intr_no, void (*isr) (void)){
+    idt[intr_no].offset_0_15  = (unsigned) isr & 0xffff;
+    idt[intr_no].offset_16_31 = ((unsigned) isr >> 16) & 0xffff;
+    idt[intr_no].selector     = CODE_SELECTOR;
+    idt[intr_no].dword_count  = 0;
+    idt[intr_no].unused       = 0;
+    idt[intr_no].type         = 0xe;
+    idt[intr_no].dt           = 0;
+    idt[intr_no].dpl          = 0;
+    idt[intr_no].p            = 1;
+}
 
+void fatal_exception (int n){
+    WINDOW error_window = {0, 24, 80, 1, 0, 0, ' '};
+
+    wprintf (&error_window, "Fatal exception %d (%s)", n, active_proc->name);
+    while (42) ;
+}
+
+void exception0 (){fatal_exception (0);}
+void exception1 (){fatal_exception (1);}
+void exception2 (){fatal_exception (2);}
+void exception3 (){fatal_exception (3);}
+void exception4 (){fatal_exception (4);}
+void exception5 (){fatal_exception (5);}
+void exception6 (){fatal_exception (6);}
+void exception7 (){fatal_exception (7);}
+void exception8 (){fatal_exception (8);}
+void exception9 (){fatal_exception (9);}
+void exception10 (){fatal_exception (10);}
+void exception11 (){fatal_exception (11);}
+void exception12 (){fatal_exception (12);}
+void exception13 (){fatal_exception (13);}
+void exception14 (){fatal_exception (14);}
+void exception15 (){fatal_exception (15);}
+void exception16 (){fatal_exception (16);}
+
+void spurious_int ();
+void dummy_spurious_int (){
+    asm ("spurious_int:");
+    asm ("pusha;movb $0x20,%al;outb %al,$0x20;popa;iret");
 }
 
 /*
  * Timer ISR
  */
 void isr_timer ();
-void dummy_isr_timer (){
+void isr_timer_wrapper(){
+}
 
+void isr_timer_impl (){
 }
 
 /*
  * COM1 ISR
  */
 void isr_com1 ();
-void dummy_isr_com1 (){
+void wrapper_isr_com1 (){
+}
 
+void isr_com1_impl(){
 }
 
 /*
  * Keyboard ISR
  */
 void isr_keyb();
-
-void dummy_isr_keyb(){
+void wrapper_isr_keyb(){
     /*
      *	PUSHL	%EAX		; Save process' context
      *  PUSHL   %ECX
@@ -60,28 +99,12 @@ void dummy_isr_keyb(){
     asm ("isr_keyb:");
     asm ("pushl %eax;pushl %ecx;pushl %edx");
     asm ("pushl %ebx;pushl %ebp;pushl %esi;pushl %edi");
-
     /* Save the context pointer ESP to the PCB */
     asm ("movl %%esp,%0" : "=m" (active_proc->esp) : );
-
-    p = interrupt_table[KEYB_IRQ];
-
-    if (p == NULL) {
-	panic ("service_intr_0x61: Spurious interrupt");
-    }
-
-    if (p->state != STATE_INTR_BLOCKED) {
-	panic ("service_intr_0x61: No process waiting");
-    }
-
-    /* Add event handler to ready queue */
-    add_ready_queue (p);
-
-    active_proc = dispatcher();
-
+    /* Call the actual implementation of the ISR */
+    asm ("call isr_keyb_impl");
     /* Restore context pointer ESP */
     asm ("movl %0,%%esp" : : "m" (active_proc->esp) );
-
     /*
      *	MOVB  $0x20,%AL	; Reset interrupt controller
      *	OUTB  %AL,$0x20
@@ -98,16 +121,30 @@ void dummy_isr_keyb(){
     asm ("popl %edi;popl %esi;popl %ebp;popl %ebx");
     asm ("popl %edx;popl %ecx;popl %eax");
     asm ("iret");
+}
 
+void isr_keyb_impl(){
+    PROCESS p = interrupt_table[KEYB_IRQ];
+
+    if (p == NULL) {
+	panic ("service_intr_0x61: Spurious interrupt");
+    }
+
+    if (p->state != STATE_INTR_BLOCKED) {
+	panic ("service_intr_0x61: No process waiting");
+    }
+
+    /* Add event handler to ready queue */
+    add_ready_queue (p);
+
+    active_proc = dispatcher();
 }
 
 void wait_for_interrupt (int intr_no){
 
 }
 
-void delay (){
-    asm ("nop;nop;nop");
-}
+void delay (){asm ("nop;nop;nop");}
 
 void re_program_interrupt_controller (){
     /* Shift IRQ Vectors so they don't collide with the
@@ -136,15 +173,32 @@ void re_program_interrupt_controller (){
 
 void init_interrupts(){
   int i;
-  re_program_interrupt_controller();
-  for(i = 0; i < MAX_INTERRUPTS; i++){
-    idt[i].selector =    8;
-    idt[i].dword_count = 0;
-    idt[i].type =        0xE;
-    idt[i].dt =          0;
-    idt[i].dpl =         0;
-    idt[i].p =           1;
-    load_idt(&idt[i]);
-  }
+  assert (sizeof (IDT) == IDT_ENTRY_SIZE);
+  load_idt (idt);
 
+  for (i = 0; i < MAX_INTERRUPTS; i++){
+    init_idt_entry (i, spurious_int);
+  }
+  init_idt_entry (0, exception0);
+  init_idt_entry (1, exception1);
+  init_idt_entry (2, exception2);
+  init_idt_entry (3, exception3);
+  init_idt_entry (4, exception4);
+  init_idt_entry (5, exception5);
+  init_idt_entry (6, exception6);
+  init_idt_entry (7, exception7);
+  init_idt_entry (8, exception8);
+  init_idt_entry (9, exception9);
+  init_idt_entry (10, exception10);
+  init_idt_entry (11, exception11);
+  init_idt_entry (12, exception12);
+  init_idt_entry (13, exception13);
+  init_idt_entry (14, exception14);
+  init_idt_entry (15, exception15);
+  init_idt_entry (16, exception16);
+
+  re_program_interrupt_controller();
+
+  interrupts_initialized = TRUE;
+  asm ("sti");
 }
