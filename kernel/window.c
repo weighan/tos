@@ -3,24 +3,35 @@
 static void scroll(WINDOW* wnd);
 
 void move_cursor(WINDOW* wnd, int x, int y){
+  volatile int saved_if;
+  DISABLE_INTR(saved_if);
   if((0 <=  x )&& (x < wnd->width)){
     wnd->cursor_x = x;
   }
   if((0 <=  y) && (y < wnd->height)){
     wnd->cursor_y = y;
   }
+  ENABLE_INTR(saved_if);
 }
 
 void remove_cursor(WINDOW* wnd){
+  volatile int saved_if;
+  DISABLE_INTR(saved_if);
   poke_w(0xb8000 + ((wnd->x + wnd->cursor_x)*2) + ((wnd->y + wnd->cursor_y)*160) , 0);
+  ENABLE_INTR(saved_if);
 }
 
 void show_cursor(WINDOW* wnd){
+  volatile int saved_if;
+  DISABLE_INTR(saved_if);
   short cursor = (0x82 << 8) | wnd->cursor_char;
   poke_w(0xb8000 + ((wnd->x + wnd->cursor_x)*2) + ((wnd->y + wnd->cursor_y)*160) , cursor);
+  ENABLE_INTR(saved_if);
 }
 
 void clear_window(WINDOW* wnd){
+  volatile int saved_if;
+  DISABLE_INTR(saved_if);
   int w, h;
   for(h=0; h < wnd->height; h++){
     for(w=0; w < wnd->width; w++){
@@ -29,9 +40,12 @@ void clear_window(WINDOW* wnd){
   }
   wnd->cursor_x = 0;
   wnd->cursor_y = 0;
+  ENABLE_INTR(saved_if);
 }
 
 void output_char(WINDOW* wnd, unsigned char c){
+  volatile int saved_if;
+  DISABLE_INTR(saved_if);
   short tempchar = (0x0f << 8) | c;
   if(c != '\n'){
     poke_w(0xb8000 + ((wnd->x + wnd->cursor_x)*2) + ((wnd->y + wnd->cursor_y)*160) , tempchar);
@@ -46,9 +60,12 @@ void output_char(WINDOW* wnd, unsigned char c){
   else{
     wnd->cursor_x++;
   }
+  ENABLE_INTR(saved_if);
 }
 
 void output_string(WINDOW* wnd, const char *str){
+  volatile int saved_if;
+  DISABLE_INTR(saved_if);
   short tempchar;
   int len, i = 0;
   len = k_strlen(str);
@@ -70,6 +87,7 @@ void output_string(WINDOW* wnd, const char *str){
     }
     i++;
   }
+  ENABLE_INTR(saved_if);
 }
 
 static void scroll(WINDOW* wnd){

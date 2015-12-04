@@ -80,7 +80,6 @@ void return_to_boot()
          if (is_on_ready_queue(&pcb[i]))
             remove_ready_queue(&pcb[i]);
    }
-
    resign();
 }
 

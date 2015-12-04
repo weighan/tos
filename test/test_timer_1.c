@@ -3,12 +3,12 @@
 #include <test.h>
 
 /*
- * The following test program tests the timer process. 
+ * The following test program tests the timer process.
  * 1. Test_timer_1_process_B has a for loop in which it does a slow animation
  *    of some characters on the screen by using timer service.
  * 2. Test_timer_1_process_A has an infinite in which it does not use timer
  *    service and does a fast animation of characters.
- * 3. The test checks if process_A's animation is faster than process_B's 
+ * 3. The test checks if process_A's animation is faster than process_B's
  *    annimation.
  */
 
@@ -28,6 +28,7 @@ void test_timer_1_process_A(PROCESS self, PARAM param)
     while (42) {
 	*(screen_base + i * 2) = *(screen_base + i * 2) + 1;
 	i++;
+
 	if (i == 6)
 	    i = 0;
 
@@ -62,7 +63,7 @@ void test_timer_1_process_B(PROCESS self, PARAM param)
 
     return_to_boot();
 }
- 
+
 void test_timer_1()
 {
     check_sum = 0;

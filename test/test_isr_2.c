@@ -20,9 +20,9 @@ void test_isr_2_process_1(PROCESS self, PARAM param)
 
     while (42) {
         if (check_sum == 80000)
-	    return_to_boot();   
+	    return_to_boot();
         check_sum ++;
-	poke_b(screen_offset, peek_b(screen_offset) + 1);
+        poke_b(screen_offset, peek_b(screen_offset) + 1);
     }
 }
 
@@ -30,12 +30,12 @@ void test_isr_2_process_2(PROCESS self, PARAM param)
 {
     /* screen_offset points to the "Z" of process 2 */
     MEM_ADDR screen_offset = 0xb8000 + 5 * 160 + 2 * 11;
-    
+
     while (42) {
         if (test_isr_2_check_sum == 80000)
 	    return_to_boot();
         test_isr_2_check_sum ++;
-	poke_b(screen_offset, peek_b(screen_offset) + 1);
+        poke_b(screen_offset, peek_b(screen_offset) + 1);
     }
 }
 

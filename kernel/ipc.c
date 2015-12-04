@@ -7,6 +7,8 @@ void add_block_list(PORT dest_port);
 void remove_block_list(PORT dest_port, PROCESS rm_this);
 
 PORT create_port(){
+  volatile int saved_if;
+  DISABLE_INTR(saved_if);
   int i;
   for(i =0; i < MAX_PORTS; i++){
     if(port[i].used == FALSE){
@@ -24,13 +26,17 @@ PORT create_port(){
         }
         temp->next = &port[i];
       }
+      ENABLE_INTR(saved_if);
       return &port[i];
     }
   }
+  ENABLE_INTR(saved_if);
   return NULL;
 }
 
 PORT create_new_port (PROCESS owner){
+  volatile int saved_if;
+  DISABLE_INTR(saved_if);
   int i;
   for(i =0; i < MAX_PORTS; i++){
     if(port[i].used == FALSE){
@@ -48,14 +54,17 @@ PORT create_new_port (PROCESS owner){
         }
         temp->next = &port[i];
       }
-
+      ENABLE_INTR(saved_if);
       return &port[i];
     }
   }
+  ENABLE_INTR(saved_if);
   return NULL;
 }
 
 void send (PORT dest_port, void* data){
+  volatile int saved_if;
+  DISABLE_INTR(saved_if);
   active_proc->param_data = data;
   //sender goes first
   if(dest_port->owner->state != STATE_RECEIVE_BLOCKED || !(dest_port->open)){
@@ -63,21 +72,26 @@ void send (PORT dest_port, void* data){
 
     active_proc->state = STATE_SEND_BLOCKED;
     remove_ready_queue(active_proc);
+    ENABLE_INTR(saved_if);
     resign();
     //remove_block_list(dest_port);
   }
   //sender goes second
   else {
+    DISABLE_INTR(saved_if);
     add_block_list(dest_port);
     active_proc->state = STATE_REPLY_BLOCKED;
     remove_ready_queue(active_proc);
     add_ready_queue(dest_port->owner);
+    ENABLE_INTR(saved_if);
     resign();
     //remove_block_list(dest_port);
   }
 }
 
 void message (PORT dest_port, void* data){
+  volatile int saved_if;
+  DISABLE_INTR(saved_if);
   active_proc->param_data = data;
   //msg goes first
   if(dest_port->owner->state != STATE_RECEIVE_BLOCKED || !(dest_port->open)){
@@ -85,20 +99,24 @@ void message (PORT dest_port, void* data){
 
     active_proc->state = STATE_MESSAGE_BLOCKED;
     remove_ready_queue(active_proc);
+    ENABLE_INTR(saved_if);
     resign();
     //remove_block_list(dest_port);
   }
   //msg goes second
   else{
+    DISABLE_INTR(saved_if);
     add_block_list(dest_port);
     add_ready_queue(dest_port->owner);
+    ENABLE_INTR(saved_if);
     resign();
     //remove_block_list(dest_port);
   }
-  dest_port->owner->param_data = data;
 }
 
 void* receive (PROCESS* sender){
+  volatile int saved_if;
+  DISABLE_INTR(saved_if);
   PORT p = active_proc->first_port;
   PROCESS temp;
   void* dat;
@@ -108,7 +126,9 @@ void* receive (PROCESS* sender){
   if(p == NULL){
     active_proc->state = STATE_RECEIVE_BLOCKED;
     remove_ready_queue(active_proc);
+    ENABLE_INTR(saved_if);
     resign();
+    DISABLE_INTR(saved_if);
     p = check_block_list();
   }
   //if blocked list is not empty or receive goes second
@@ -123,27 +143,8 @@ void* receive (PROCESS* sender){
   }
 
   remove_block_list(p,temp);
+  ENABLE_INTR(saved_if);
   return dat;
-  /*
-  while(p != NULL){
-    if(p->open && p->blocked_list_head != NULL){
-      temp = p->blocked_list_head;
-      *sender = temp;
-      kprintf("sender is: %s\n", temp->name);
-      dat = temp->param_data;
-      if(temp->state == STATE_MESSAGE_BLOCKED){
-        add_ready_queue(temp);
-      }
-      else if(temp->state == STATE_SEND_BLOCKED){
-        temp->state = STATE_REPLY_BLOCKED;
-      }
-      remove_block_list(p,temp);
-      return dat;
-    }
-    p = p->next;
-  }
-  return NULL;
-  */
 }
 
 //checks the block list for the first open port that has a process
@@ -160,10 +161,8 @@ PORT check_block_list(){
 }
 
 void reply (PROCESS sender){
-  if(sender->state == STATE_REPLY_BLOCKED){
-    add_ready_queue(sender);
-    resign();
-  }
+  add_ready_queue(sender);
+  resign();
 }
 
 void open_port (PORT port){

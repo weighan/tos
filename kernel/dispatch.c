@@ -17,6 +17,8 @@ PCB *ready_queue [MAX_READY_QUEUES];
  */
 
 void add_ready_queue (PROCESS proc){
+  volatile int saved_if;
+  DISABLE_INTR(saved_if);
   if(ready_queue[proc->priority] == NULL){
     ready_queue[proc->priority] = proc;
     proc->next = proc;
@@ -30,6 +32,7 @@ void add_ready_queue (PROCESS proc){
     ready_queue[proc->priority]->prev = proc;
   }
   proc->state = STATE_READY;
+  ENABLE_INTR(saved_if);
 }
 
 /*
@@ -40,7 +43,8 @@ void add_ready_queue (PROCESS proc){
  */
 
 void remove_ready_queue (PROCESS proc){
-
+  volatile int saved_if;
+  DISABLE_INTR(saved_if);
   if(proc->next == proc){
     ready_queue[proc->priority] = NULL;
   }
@@ -51,8 +55,7 @@ void remove_ready_queue (PROCESS proc){
     proc->prev->next = proc->next;
     proc->next->prev = proc->prev;
   }
-  //proc->next = NULL;
-  //proc->prev = NULL;
+  ENABLE_INTR(saved_if);
 }
 
 /*
@@ -64,15 +67,22 @@ void remove_ready_queue (PROCESS proc){
  */
 
 PROCESS dispatcher(){
+  volatile int saved_if;
+  DISABLE_INTR(saved_if);
   int priority = MAX_READY_QUEUES -1;
   while(ready_queue[priority] == NULL){
     priority--;
-    if(priority <0){return NULL;}
+    if(priority <0){
+      ENABLE_INTR(saved_if);
+      return NULL;
+    }
   }
   if(priority == active_proc->priority){
+    ENABLE_INTR(saved_if);
     return active_proc->next;
   }
   else{
+    ENABLE_INTR(saved_if);
     return ready_queue[priority];
   }
 }
@@ -87,27 +97,26 @@ PROCESS dispatcher(){
  */
 void resign(){
   //push old process' registers to stack
-  asm("pushl %eax\n\t"
-      "pushl %ecx\n\t"
-      "pushl %edx\n\t"
-      "pushl %ebx\n\t"
-      "pushl %ebp\n\t"
-      "pushl %esi\n\t"
-      "pushl %edi");
+  asm("pushfl\n\t"
+      "cli\n\t"
+      "pop %eax\n\t"
+      "xchg (%esp), %eax\n\t"
+      "push %cs\n\t"
+      "push %eax");
+
+  asm ("pushl %eax;pushl %ecx;pushl %edx");
+  asm ("pushl %ebx;pushl %ebp;pushl %esi;pushl %edi");
+
   asm("movl %%esp , %0" : "=r" (active_proc->esp):);
 
   active_proc = dispatcher();
 
   //load new process' new registers from stack
-  asm("movl %0, %%esp" :: "r" (active_proc->esp ):);
-  asm("popl %edi\n\t"
-      "popl %esi\n\t"
-      "popl %ebp\n\t"
-      "popl %ebx\n\t"
-      "popl %edx\n\t"
-      "popl %ecx\n\t"
-      "popl %eax");
-  asm("ret");
+  asm("movl %0, %%esp" :: "r" (active_proc->esp):);
+
+  asm ("popl %edi;popl %esi;popl %ebp;popl %ebx");
+  asm ("popl %edx;popl %ecx;popl %eax");
+  asm("iret");
 }
 
 /*

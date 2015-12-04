@@ -6,31 +6,41 @@ PORT create_process (void (*ptr_to_new_proc) (PROCESS, PARAM),
 int prio,
 PARAM param,
 char *name){
+  volatile int saved_if;
   int i;
   MEM_ADDR stack;
+  DISABLE_INTR(saved_if);
   for(i = 0; i< MAX_PROCS; i++){
     if(pcb[i].used == FALSE){
 
-        pcb[i].used = TRUE;
-        pcb[i].priority = prio;
-        pcb[i].state = STATE_READY;
+      pcb[i].used = TRUE;
+      pcb[i].priority = prio;
+      pcb[i].state = STATE_READY;
 
-        stack = 0xA0000 - (0x7800 * i);
-        poke_l(stack ,(long) param);
-        poke_l(stack -4, (long)&pcb[i]);
-        poke_l(stack -8,(long) ptr_to_new_proc);
-        poke_l(stack -12,(long) ptr_to_new_proc);
-        pcb[i].esp = stack -40;
+      stack = 0xA0000 - (0x7800 * i);
+      poke_l(stack ,(long) param);
+      poke_l(stack -4, (long)&pcb[i]);
+      if(interrupts_initialized){
+        poke_l(stack -12,(long) 512);
+      }
+      else{
+        poke_l(stack -12,(long) 0);
+      }
+      poke_l(stack -16,(long) 8);
+      poke_l(stack -20,(long) ptr_to_new_proc);
+      pcb[i].esp = stack -48;
 
-        pcb[i].param_data = param;
-        pcb[i].name = name;
-        add_ready_queue(&pcb[i]);
+      pcb[i].param_data = param;
+      pcb[i].name = name;
+      add_ready_queue(&pcb[i]);
 
-        //create new port
-        create_new_port(&pcb[i]);
-        return pcb[i].first_port;
+      //create new port
+      create_new_port(&pcb[i]);
+      ENABLE_INTR(saved_if);
+      return pcb[i].first_port;
     }
   }
+  ENABLE_INTR(saved_if);
   return NULL;
 }
 
@@ -40,6 +50,8 @@ PROCESS fork(){
 }
 
 void print_process(WINDOW* wnd, PROCESS p){
+  volatile int saved_if;
+  DISABLE_INTR(saved_if);
   char* str;
   output_string(wnd, "State: ");
 
@@ -47,19 +59,19 @@ void print_process(WINDOW* wnd, PROCESS p){
     str = "RDY\n";
   }
   else if(p->state == STATE_SEND_BLOCKED){
-    str = "SEND BLOCKD\n";
+    str = "SEND BLOCKED\n";
   }
   else if(p->state == STATE_REPLY_BLOCKED){
-    str = "RPLY BLOCKD\n";
+    str = "RPLY BLOCKED\n";
   }
   else if(p->state == STATE_RECEIVE_BLOCKED){
-    str = "RECV BLOCKD\n";
+    str = "RECV BLOCKED\n";
   }
   else if(p->state == STATE_MESSAGE_BLOCKED){
-    str = "MSG BLOCKD\n";
+    str = "MSG BLOCKED\n";
   }
   else if(p->state == STATE_INTR_BLOCKED){
-    str = "INTR BLOCKD\n";
+    str = "INTR BLOCKED\n";
   }
   else{
     str = "undefined1\n";
@@ -74,9 +86,12 @@ void print_process(WINDOW* wnd, PROCESS p){
   str = p->name;
   output_string(wnd, str);
   output_char(wnd, '\n');
+  ENABLE_INTR(saved_if);
 }
 
 void print_all_processes(WINDOW* wnd){
+  volatile int saved_if;
+  DISABLE_INTR(saved_if);
   int i;
   char* str;
   char c;
@@ -91,19 +106,19 @@ void print_all_processes(WINDOW* wnd){
         str = "READY             ";
       }
       else if(pcb[i].state == STATE_SEND_BLOCKED){
-        str = "SEND BLOCKD       ";
+        str = "SEND BLOCKED      ";
       }
       else if(pcb[i].state == STATE_REPLY_BLOCKED){
-        str = "RPLY BLOCKD       ";
+        str = "RPLY BLOCKED      ";
       }
       else if(pcb[i].state == STATE_RECEIVE_BLOCKED){
-        str = "RECV BLOCKD       ";
+        str = "RECV BLOCKED      ";
       }
       else if(pcb[i].state == STATE_MESSAGE_BLOCKED){
-        str = "MSG BLOCKD        ";
+        str = "MSG BLOCKED       ";
       }
       else if(pcb[i].state == STATE_INTR_BLOCKED){
-        str = "INTR BLOCKD       ";
+        str = "INTR BLOCKED      ";
       }
       else{
         str = "undefined2        ";
@@ -124,6 +139,7 @@ void print_all_processes(WINDOW* wnd){
       output_char(wnd, '\n');
     }
   }
+  ENABLE_INTR(saved_if);
 }
 
 void init_process(){
