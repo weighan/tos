@@ -66,33 +66,15 @@ void dummy_spurious_int (){
 void isr_timer();
 void isr_timer_wrapper(){
   asm ("isr_timer:");
-/*
-  PROCESS p = interrupt_table[TIMER_IRQ];
-  if (p != NULL && p-> state == STATE_INTR_BLOCKED) {
-    if(ready_queue[p->priority] == NULL){
-      ready_queue[p->priority] = p;
-      p->next = p;
-      p->prev = p;
-    }
 
-    else{
-      p->prev = ready_queue[p->priority]->prev;
-      p->next = ready_queue[p->priority];
-      ready_queue[p->priority]->prev->next = p;
-      ready_queue[p->priority]->prev = p;
-    }
-    p->state = STATE_READY;
-  }
-*/
-  asm("call isr_timer_impl");
   asm ("pushl %eax;pushl %ecx;pushl %edx");
   asm ("pushl %ebx;pushl %ebp;pushl %esi;pushl %edi");
-
   asm("movl %%esp , %0" : "=r" (active_proc->esp):);
 
+  asm("call isr_timer_impl");
   active_proc = dispatcher();
-  asm("movl %0, %%esp" :: "r" (active_proc->esp):);
 
+  asm("movl %0, %%esp" :: "r" (active_proc->esp):);
   asm ("movb $0x20,%al;outb %al,$0x20");
   asm ("popl %edi;popl %esi;popl %ebp;popl %ebx");
   asm ("popl %edx;popl %ecx;popl %eax");
@@ -101,21 +83,25 @@ void isr_timer_wrapper(){
 
 void isr_timer_impl (){
   PROCESS p = interrupt_table[TIMER_IRQ];
-  add_ready_queue(p);
-
+  if(p != NULL && p->state == STATE_INTR_BLOCKED){
+    add_ready_queue(p);
+  }
 }
 
 /*
  * COM1 ISR
  */
 void isr_com1 ();
-void wrapper_isr_com1 (){
+void wrapper_isr_com1(){
   asm ("isr_com1:");
+
   asm ("pushl %eax;pushl %ecx;pushl %edx");
   asm ("pushl %ebx;pushl %ebp;pushl %esi;pushl %edi");
+  asm("movl %%esp,%0" : "=m" (active_proc->esp) : );
 
   asm ("call isr_com1_impl");
 
+  asm("movl %0,%%esp" : : "m" (active_proc->esp) );
   asm ("movb $0x20,%al;outb %al,$0x20");
   asm ("popl %edi;popl %esi;popl %ebp;popl %ebx");
   asm ("popl %edx;popl %ecx;popl %eax");
@@ -123,6 +109,12 @@ void wrapper_isr_com1 (){
 }
 
 void isr_com1_impl(){
+  PROCESS p = interrupt_table[COM1_IRQ];
+  if(p != NULL && p->state == STATE_INTR_BLOCKED){
+    add_ready_queue(p);
+    active_proc = p;
+    interrupt_table[COM1_IRQ] = NULL;
+  }
 }
 
 /*
@@ -130,15 +122,6 @@ void isr_com1_impl(){
  */
 void isr_keyb();
 void wrapper_isr_keyb(){
-  /*
-   *	PUSHL	%EAX		; Save process' context
-   *  PUSHL   %ECX
-   *  PUSHL   %EDX
-   *  PUSHL   %EBX
-   *  PUSHL   %EBP
-   *  PUSHL   %ESI
-   *  PUSHL   %EDI
-   */
   asm ("isr_keyb:");
   asm ("pushl %eax;pushl %ecx;pushl %edx");
   asm ("pushl %ebx;pushl %ebp;pushl %esi;pushl %edi");
@@ -151,14 +134,6 @@ void wrapper_isr_keyb(){
   /*
    *	MOVB  $0x20,%AL	; Reset interrupt controller
    *	OUTB  %AL,$0x20
-   *	POPL  %EDI      ; Restore previously saved context
-   *  POPL  %ESI
-   *  POPL  %EBP
-   *  POPL  %EBX
-   *  POPL  %EDX
-   *  POPL  %ECX
-   *  POPL  %EAX
-   *	IRET		; Return to new process
    */
   asm ("movb $0x20,%al;outb %al,$0x20");
   asm ("popl %edi;popl %esi;popl %ebp;popl %ebx");
