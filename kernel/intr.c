@@ -83,9 +83,14 @@ void isr_timer_wrapper(){
 
 void isr_timer_impl (){
   PROCESS p = interrupt_table[TIMER_IRQ];
+  //kprintf("p's state is %d\n", p->state);
+  //print_all_processes(kernel_window);
   if(p != NULL && p->state == STATE_INTR_BLOCKED){
     add_ready_queue(p);
+    //kprintf("added %s\n", p->name);
   }
+  //p = dispatcher();
+  //kprintf("%s\n",p->name);
 }
 
 /*
@@ -94,7 +99,7 @@ void isr_timer_impl (){
 void isr_com1 ();
 void wrapper_isr_com1(){
   asm ("isr_com1:");
-
+  //kprintf("com intr\n");
   asm ("pushl %eax;pushl %ecx;pushl %edx");
   asm ("pushl %ebx;pushl %ebp;pushl %esi;pushl %edi");
   asm("movl %%esp,%0" : "=m" (active_proc->esp) : );
@@ -113,8 +118,8 @@ void isr_com1_impl(){
   if(p != NULL && p->state == STATE_INTR_BLOCKED){
     add_ready_queue(p);
     active_proc = p;
-    interrupt_table[COM1_IRQ] = NULL;
   }
+  kprintf("com intr\n");
 }
 
 /*
@@ -164,7 +169,9 @@ void wait_for_interrupt (int intr_no){
   active_proc->state = STATE_INTR_BLOCKED;
   interrupt_table[intr_no] = active_proc;
   remove_ready_queue(active_proc);
+  //kprintf("active proc %s", active_proc->name);
   ENABLE_INTR(saved_if);
+  //resign();
 }
 
 void delay (){asm ("nop;nop;nop");}
@@ -220,9 +227,9 @@ void init_interrupts(){
   init_idt_entry (14, exception14);
   init_idt_entry (15, exception15);
   init_idt_entry (16, exception16);
-  init_idt_entry(TIMER_IRQ, isr_timer_wrapper);
-  init_idt_entry(KEYB_IRQ, wrapper_isr_keyb);
-  init_idt_entry(COM1_IRQ, wrapper_isr_com1);
+  init_idt_entry(TIMER_IRQ, isr_timer);
+  init_idt_entry(KEYB_IRQ,  isr_keyb);
+  init_idt_entry(COM1_IRQ,  wrapper_isr_com1);
 
   re_program_interrupt_controller();
 

@@ -6,6 +6,7 @@ void timer_notifier(PROCESS self, PARAM param){
   while(1){
     wait_for_interrupt(TIMER_IRQ);
     message(timer_port, NULL);
+    //kprintf("beep\n");
   }
 }
 
@@ -22,7 +23,9 @@ void timer_process(PROCESS self, PARAM param){
   create_process(timer_notifier, 7, 0, "Timer Notifier");
 
   while(1){
+    //kprintf("timer\n");
     msg = receive(&client_proc);
+    //kprintf("timer got msg\n");
     if(msg != NULL){
       i = client_proc - pcb;
       ticks_remaining[i] = msg->num_of_ticks;

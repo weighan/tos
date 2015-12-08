@@ -14,15 +14,14 @@ void com_reader_process(PROCESS sef, PARAM param){
     msg = receive(&com_proc);
     kprintf("msg from: %s\n", com_proc->name);
     //kprintf("len is %d\n", msg->len_input_buffer);
-    for(i = 0; i < 500; i++){
+    for(i = 0; i < msg->len_input_buffer; i++){
       wait_for_interrupt(COM1_IRQ);
       //msg->input_buffer[i] = inportb(COM1_PORT);
       //kprintf("%c\n",msg->input_buffer[i]);
       kprintf("%c",inportb(COM1_PORT));
-      resign();
     }
     msg->input_buffer[i+1] = '\0';
-    message(com_port, NULL);
+    message(com_port, msg);
   }
 }
 
@@ -31,22 +30,27 @@ void com_process(PROCESS sef, PARAM param){
   PROCESS client_proc, reader;
   int i;
   PORT reader_port;
-  //reader_port = create_process(com_reader_process, 7, 0, "COM Reader Proc");
+  reader_port = create_process(com_reader_process, 7, 0, "COM Reader Proc");
 
   while(1){
     i=0;
     msg = receive(&client_proc);
     message(reader_port, msg);
     kprintf("msg sent\n");
+
     while(msg->output_buffer[i] != '\0'){
       //kprintf("%c\n", msg->output_buffer[i]);
       while (!(inportb(COM1_PORT+5) & (1<<5)));
-      outportb(COM1_PORT, msg->output_buffer[i]);
+      outportb(COM1_PORT,(unsigned char) msg->output_buffer[i]);
       i++;
     }
-
-
-
+/*
+    while(i <100){
+      wait_for_interrupt(COM1_IRQ);
+      kprintf("%c",inportb(COM1_PORT));
+      i++;
+    }
+*/
     receive(&reader);
     kprintf("client is: %s\n", client_proc->name);
     //print_all_processes(kernel_window);

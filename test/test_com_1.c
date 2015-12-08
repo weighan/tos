@@ -26,22 +26,22 @@ void test_com_1()
 
     COM_Message msg;
     int         i;
-    
+
     test_reset();
     init_interrupts();
     init_null_process();
     init_timer();
     init_com();
-    
+
     print_all_processes(kernel_window);
     kprintf("\n");
-    
+
     msg.output_buffer    = "Hello World!";
     msg.input_buffer     = buffer;
     msg.len_input_buffer = 12;
-    
+
     send(com_port, &msg);
-    
+
     for (i = 0; i < 12; i++)
 	kprintf("%c", buffer[i]);
     kprintf("\n");
