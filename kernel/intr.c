@@ -69,33 +69,32 @@ void isr_timer_wrapper(){
 
   asm ("pushl %eax;pushl %ecx;pushl %edx");
   asm ("pushl %ebx;pushl %ebp;pushl %esi;pushl %edi");
-  asm("movl %%esp , %0" : "=r" (active_proc->esp):);
+  asm("movl %%esp , %0" : "=m" (active_proc->esp):);
 
   asm("call isr_timer_impl");
   active_proc = dispatcher();
 
-  asm("movl %0, %%esp" :: "r" (active_proc->esp):);
+  asm("movl %0, %%esp" :: "m" (active_proc->esp):);
   asm ("movb $0x20,%al;outb %al,$0x20");
   asm ("popl %edi;popl %esi;popl %ebp;popl %ebx");
   asm ("popl %edx;popl %ecx;popl %eax");
   asm ("iret");
 }
 
-void isr_timer_impl (){
+void isr_timer_impl(){
   PROCESS p = interrupt_table[TIMER_IRQ];
-  //kprintf("p's state is %d\n", p->state);
+
+  //kprintf("timer time\n");
   //print_all_processes(kernel_window);
   if(p != NULL && p->state == STATE_INTR_BLOCKED){
     add_ready_queue(p);
-    //kprintf("added %s\n", p->name);
+   //kprintf("added %s\n", p->name);
   }
-  //p = dispatcher();
-  //kprintf("%s\n",p->name);
+
 }
 
-/*
- * COM1 ISR
- */
+//COM1 ISR
+
 void isr_com1 ();
 void wrapper_isr_com1(){
   asm ("isr_com1:");
@@ -105,7 +104,7 @@ void wrapper_isr_com1(){
   asm("movl %%esp,%0" : "=m" (active_proc->esp) : );
 
   asm ("call isr_com1_impl");
-
+  active_proc = dispatcher();
   asm("movl %0,%%esp" : : "m" (active_proc->esp) );
   asm ("movb $0x20,%al;outb %al,$0x20");
   asm ("popl %edi;popl %esi;popl %ebp;popl %ebx");
@@ -117,14 +116,15 @@ void isr_com1_impl(){
   PROCESS p = interrupt_table[COM1_IRQ];
   if(p != NULL && p->state == STATE_INTR_BLOCKED){
     add_ready_queue(p);
-    active_proc = p;
+    //active_proc = p;
   }
-  kprintf("com intr\n");
+  //kprintf("com intr\n");
+  //print_all_processes(kernel_window);
+  //while(1);
 }
 
-/*
- * Keyboard ISR
- */
+//Keyboard ISR
+
 void isr_keyb();
 void wrapper_isr_keyb(){
   asm ("isr_keyb:");
@@ -171,10 +171,11 @@ void wait_for_interrupt (int intr_no){
   remove_ready_queue(active_proc);
   //kprintf("active proc %s", active_proc->name);
   ENABLE_INTR(saved_if);
-  //resign();
+  resign();
+  interrupt_table[intr_no] = NULL;
 }
 
-void delay (){asm ("nop;nop;nop");}
+void delay(){asm ("nop;nop;nop");}
 
 void re_program_interrupt_controller (){
   /* Shift IRQ Vectors so they don't collide with the
@@ -205,6 +206,7 @@ void init_interrupts(){
   int i;
   assert (sizeof (IDT) == IDT_ENTRY_SIZE);
   load_idt (idt);
+
 
   for (i = 0; i < MAX_INTERRUPTS; i++){
     init_idt_entry (i, spurious_int);

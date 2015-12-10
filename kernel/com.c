@@ -1,7 +1,3 @@
-/* Internet ressources:
- * http://workforce.cup.edu/little/serial.html
- * http://www.lammertbies.nl/comm/info/RS-232.html
- */
 #include <kernel.h>
 
 PORT com_port;
@@ -12,15 +8,17 @@ void com_reader_process(PROCESS sef, PARAM param){
   int i;
   while(1){
     msg = receive(&com_proc);
-    kprintf("msg from: %s\n", com_proc->name);
+    //kprintf("msg from: %s\n", com_proc->name);
     //kprintf("len is %d\n", msg->len_input_buffer);
     for(i = 0; i < msg->len_input_buffer; i++){
       wait_for_interrupt(COM1_IRQ);
-      //msg->input_buffer[i] = inportb(COM1_PORT);
-      //kprintf("%c\n",msg->input_buffer[i]);
-      kprintf("%c",inportb(COM1_PORT));
+      msg->input_buffer[i] = inportb(COM1_PORT);
+      //while(1);
+      kprintf("%c\n",msg->input_buffer[i]);
+      //kprintf("%c",inportb(COM1_PORT));
     }
     msg->input_buffer[i+1] = '\0';
+    kprintf("msging\n");
     message(com_port, msg);
   }
 }
@@ -38,23 +36,25 @@ void com_process(PROCESS sef, PARAM param){
     message(reader_port, msg);
     kprintf("msg sent\n");
 
-    while(msg->output_buffer[i] != '\0'){
-      //kprintf("%c\n", msg->output_buffer[i]);
+    while(msg->output_buffer[i] != 0){
+      //kprintf("%c \n", msg->output_buffer[i]);
+      if(msg->output_buffer[i] == 0){
+        kprintf("we got 0!\n");
+      }
       while (!(inportb(COM1_PORT+5) & (1<<5)));
       outportb(COM1_PORT,(unsigned char) msg->output_buffer[i]);
+      //kprintf("spit something out\n");
+      //while(1);
       i++;
     }
-/*
-    while(i <100){
-      wait_for_interrupt(COM1_IRQ);
-      kprintf("%c",inportb(COM1_PORT));
-      i++;
-    }
-*/
+    //while(1);
     receive(&reader);
     kprintf("client is: %s\n", client_proc->name);
+    while(1);
     //print_all_processes(kernel_window);
     reply(client_proc);
+    msg = NULL;
+    client_proc = NULL;
   }
 }
 

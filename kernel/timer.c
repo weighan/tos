@@ -12,7 +12,8 @@ void timer_notifier(PROCESS self, PARAM param){
 
 void timer_process(PROCESS self, PARAM param){
   int ticks_remaining[MAX_PROCS];
-  PROCESS client_proc;
+  PROCESS client_proc, notifier;
+  PORT noti;
   Timer_Message* msg;
   int i;
 
@@ -20,17 +21,14 @@ void timer_process(PROCESS self, PARAM param){
     ticks_remaining[i] = 0;
   }
 
-  create_process(timer_notifier, 7, 0, "Timer Notifier");
-
+  noti = create_process(timer_notifier, 7, 0, "Timer Notifier");
+  notifier = noti->owner;
   while(1){
     //kprintf("timer\n");
-    msg = receive(&client_proc);
+    msg = (Timer_Message*) receive(&client_proc);
     //kprintf("timer got msg\n");
-    if(msg != NULL){
-      i = client_proc - pcb;
-      ticks_remaining[i] = msg->num_of_ticks;
-    }
-    else{
+    if(msg == NULL){
+      //timer notifier sent us something
       for(i = 0; i < MAX_PROCS; i++){
         if(ticks_remaining[i] != 0){
           ticks_remaining[i]--;
@@ -39,6 +37,12 @@ void timer_process(PROCESS self, PARAM param){
           }
         }
       }
+    }
+    else{
+      //some proc sent a sleep request
+      i = client_proc - pcb;
+      ticks_remaining[i] = msg->num_of_ticks;
+
     }
   }
 }
