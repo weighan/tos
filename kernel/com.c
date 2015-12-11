@@ -27,14 +27,18 @@ void com_process(PROCESS sef, PARAM param){
     i=0;
     msg = receive(&client_proc);
     message(reader_port, msg);
-
+    kprintf("sending %s\n",msg->output_buffer);
     while(msg->output_buffer[i] != 0){
+      //kprintf("sending %s\n",);
       while (!(inportb(COM1_PORT+5) & (1<<5)));
       outportb(COM1_PORT,(unsigned char) msg->output_buffer[i]);
       i++;
     }
     receive(&reader);
     reply(client_proc);
+    msg = NULL;
+    client_proc = NULL;
+//    resign();
   }
 }
 

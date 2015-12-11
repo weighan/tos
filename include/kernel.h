@@ -13,6 +13,11 @@
 #define NULL	((void *) 0)
 #endif
 
+/*
+weighan's declarations
+*/
+
+extern int sleep_time;
 
 typedef int BOOL;
 
