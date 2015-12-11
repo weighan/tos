@@ -152,7 +152,7 @@ char get_char(){
 }
 
 void init_shell(){
-  create_process(shell_process, 4, 0, "Shell Process");
+  create_process(shell_process, 5, 0, "Shell Process");
 }
 
 void pacman(){

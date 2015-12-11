@@ -68,7 +68,9 @@ void track_1(){
   set_switch("2R");
   set_switch("1R");
   set_switch("6R");
-  wait_for_track(10);
+  if(poll_track(7)){
+    wait_for_track(10);
+  }
   send_com("L20S5\015");
   set_switch("4R");
   set_switch("3G");
@@ -103,11 +105,16 @@ void track_2(){
 }
 
 void track_3(){
+  int zamboni = 0;
   set_switch("5G");
   send_com("L20S5\015");
   set_switch("9R");
   set_switch("1G");
-  wait_for_track(10);
+  if(poll_track(7)){
+    zamboni = 1;
+    wait_for_track(10);
+  }
+
   set_switch("5R");
   set_switch("6G");
   set_switch("7R");
@@ -117,7 +124,9 @@ void track_3(){
   set_switch("4R");
   set_switch("3R");
   set_switch("8R");
-  wait_for_track(7);
+  if(zamboni){
+    wait_for_track(7);
+  }
   wait_for_track(6);
   reverse_dir();
   wait_for_track(5);
@@ -142,7 +151,7 @@ void track_4(){
   reverse_dir();
   //backup to get wagon
   // may need to change
-  sleep(200);
+  sleep(250);
   reverse_dir();
   set_switch("4R");
   set_switch("3R");
@@ -164,9 +173,16 @@ void train_process(PROCESS self, PARAM param){
     }
   }
   else{
+    //zamboni is either not present, or is going cw
     if(poll_track(2)){
+      //if zamboni is not present, it can either be
+      //config 1 or 2, both of which will work w/ no zamboni
       kprintf("config 1\n");
       track_1();
+    }
+    else if(poll_track(16)){
+      kprintf("config 4\n");
+      track_4();
     }
     else{
       kprintf("config 3\n");
@@ -174,10 +190,11 @@ void train_process(PROCESS self, PARAM param){
     }
   }
   kprintf("Wagon Retrieved\n");
-  while(1);
+  remove_ready_queue(active_proc);
+  resign();
 }
 
 
 void init_train(WINDOW* wnd){
-  create_process(train_process, 5, 0, "Train Process");
+  create_process(train_process, 4, 0, "Train Process");
 }
