@@ -134,6 +134,7 @@ void track_3(){
 }
 
 void track_4(){
+  int i = 150;
   //set switches so zamboni will run in a loop
   set_switch("8G");
   send_com("L20S5\015");
@@ -148,10 +149,10 @@ void track_4(){
   set_switch("4G");
   //wait until train gets to track 14
   wait_for_track(14);
-  reverse_dir();
   //backup to get wagon
-  // may need to change
-  sleep(250);
+  reverse_dir();
+  //change depending on system
+  sleep(210);
   reverse_dir();
   set_switch("4R");
   set_switch("3R");

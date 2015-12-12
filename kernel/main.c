@@ -22,8 +22,9 @@ void kernel_main(){
     init_shell();
 
     clear_window(kernel_window);
-    init_train(kernel_window);
-    //print_train();
+    print_train();
+    //init_train(kernel_window);
+
     //show_cursor(kernel_window);
     while (1);
 }

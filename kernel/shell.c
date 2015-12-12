@@ -50,7 +50,7 @@ void shell_process(PROCESS self, PARAM param){
       halp();
     }
     else if(!k_memcmp(command, "start", 5)){
-      start_train();
+      init_train(kernel_window);
     }
     else{
       kprintf("unrecognized command\n");
@@ -82,7 +82,7 @@ void clear_cmd(){
 }
 
 void list_procs(){
-  print_all_processes(shell_wnd);
+  print_all_processes(kernel_window);
 }
 
 void train_stop(){
